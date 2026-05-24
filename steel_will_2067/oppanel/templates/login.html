@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Logowania - Stalowa Wola</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4 font-sans antialiased">
+
+    <div class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl border border-gray-700/60 p-8 space-y-6">
+        
+        <div class="text-center space-y-2">
+            <div class="inline-flex p-3 rounded-lg bg-red-950/60 border border-red-800/40 text-red-500 font-bold mb-2">
+                ⚠ USK STALOWA WOLA
+            </div>
+            <h2 class="text-2xl font-extrabold tracking-tight">Panel Autoryzacji Służb</h2>
+            <p class="text-xs text-gray-400">Zintegrowany System Wspomagania Decyzji i Floty Dronów</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-3.5 bg-red-950/80 text-red-300 border border-red-700 text-xs font-semibold rounded-lg">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="/login" method="POST" class="space-y-4 text-sm">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Identyfikator Operatora</label>
+                <input type="text" name="username" placeholder="np. operator_straz" required
+                       class="w-full p-3 rounded-lg bg-gray-900 border border-gray-700 text-gray-200 placeholder-gray-600 focus:outline-none focus:border-red-500 font-mono">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Klucz Dostępu (Hasło)</label>
+                <input type="password" name="password" placeholder="••••••••" required
+                       class="w-full p-3 rounded-lg bg-gray-900 border border-gray-700 text-gray-200 placeholder-gray-600 focus:outline-none focus:border-red-500 font-mono">
+            </div>
+
+            <button type="submit" 
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg transition duration-150 shadow-lg tracking-wide uppercase text-xs mt-6">
+                Uruchom Konsolę Operacyjną
+            </button>
+        </form>
+
+        <div class="text-center text-[10px] text-gray-500 border-t border-gray-700/50 pt-4 font-mono">
+            System zabezpieczony. Każda próba logowania jest rejestrowana.
+        </div>
+    </div>
+
+</body>
+</html>

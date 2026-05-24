@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zgłoszenie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        #map { height: 300px; width: 100%; border-radius: 0.375rem; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-lg">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Zgłoszenie incydentu</h2>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded text-sm {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="/zgloszenie" method="POST" class="space-y-4">
+            
+            <span class="block font-medium text-gray-700 mb-2">Co się stało? (Wybierz jedną opcję):</span>
+            
+            <div class="space-y-2 bg-gray-50 p-4 rounded-md border">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Pozar/dym" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Pożar/dym</span>
+                </label>
+
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="powodz/podtopienie" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Powódz/podtopienie</span>
+                </label>
+
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Uszkodzenie infrastruktury" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Uszkodzenie infrastruktury</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Pobicie" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Nielegalne wysypisko</span>
+                </label>
+
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Zagrozenie drogowe" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Zagrożenie drogowe</span>
+                </label>
+
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Poszukiwanie osoby" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Poszukiwanie osoby</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Zwierzę w niebezpieczeństwie" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Zwierzę w niebezpieczeństwie</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Zdarzenie masowe" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Zdarzenie masowe</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Obiekt/aktywność militarna" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700">Obiekt/aktywność militarna</span>
+                </label>
+
+
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="radio" name="zdarzenia" value="Inne" id="checkbox-inne" class="w-4 h-4 text-blue-600">
+                    <span class="text-gray-700 font-semibold">Inne</span>
+                </label>
+            </div>
+
+            <div id="pole-wlasne-zagrozenie" class="hidden space-y-2">
+                <label for="custom_incydent" class="block font-medium text-gray-700">Wpisz nazwę zagrożenia:</label>
+                <input type="text" name="custom_incydent" id="custom_incydent" class="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="np. Agresywny pies bez smyczy">
+            </div>
+
+            <div id="pole-opis" class="space-y-2">
+                <label for="opis" class="block font-medium text-gray-700">Opisz szczegółowo zdarzenie:</label>
+                <textarea name="opis" id="opis" rows="3" class="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Wpisz szczegóły zgłoszenia..." required></textarea>
+            </div>
+
+            <div class="space-y-2">
+                <span class="block font-medium text-gray-700">Zaznacz miejsce zdarzenia na mapie:</span>
+                <div id="map" class="border shadow-inner"></div>
+            </div>
+
+            <input type="hidden" name="lat" id="input-lat" required>
+            <input type="hidden" name="lng" id="input-lng" required>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition duration-200 shadow">
+                Wyślij zgłoszenie
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // --- OBSŁUGA POKAZYWANIA POLA DLA WŁASNEJ NAZWY ---
+        const checkboxInne = document.getElementById('checkbox-inne');
+        const poleWlasneZagrozenie = document.getElementById('pole-wlasne-zagrozenie');
+        const inputCustomIncydent = document.getElementById('custom_incydent');
+
+        document.querySelectorAll('input[name="zdarzenia"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (checkboxInne.checked) {
+                    poleWlasneZagrozenie.classList.remove('hidden');
+                    inputCustomIncydent.required = true;
+                } else {
+                    poleWlasneZagrozenie.classList.add('hidden');
+                    inputCustomIncydent.value = '';
+                    inputCustomIncydent.required = false;
+                }
+            });
+        });
+
+        // --- INICJALIZACJA MAPY STALOWEJ WOLI (Z OGRANICZENIAMI) ---
+        const graniceStalowejWoli = L.latLngBounds(
+            [50.5200, 21.9500], 
+            [50.6200, 22.1500]  
+        );
+
+        const map = L.map('map', {
+            center: [50.5705, 22.0543], 
+            zoom: 13,                    
+            minZoom: 12,                 
+            maxBounds: graniceStalowejWoli, 
+            maxBoundsViscosity: 1.0      
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker = null;
+        const inputLat = document.getElementById('input-lat');
+        const inputLng = document.getElementById('input-lng');
+
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            inputLat.value = lat;
+            inputLng.value = lng;
+
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker([lat, lng]).addTo(map);
+            }
+        });
+    </script>
+</body>
+</html>

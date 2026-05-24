@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Służby - {{ department.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-6 font-sans antialiased">
+
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-4 bg-gray-800 p-3 rounded-xl border border-gray-700/60 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                Zalogowany operator: <span class="text-blue-400 font-bold font-mono">{{ current_user.username }}</span>
+            </div>
+            <a href="/logout" class="bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-400 text-xs font-semibold py-1 px-3 rounded transition">
+                Wyloguj się
+            </a>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="mb-4 p-3 bg-red-950/80 text-red-300 border border-red-700 text-xs font-bold rounded-xl shadow-lg">
+                        ⚠ {{ msg }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+            <h1 class="text-3xl font-extrabold text-blue-400 flex items-center gap-3">
+                <span class="inline-block w-3 h-7 bg-blue-500 rounded-sm"></span>
+                Dywizjon Dronów — {{ department.name }}
+            </h1>
+            {% if current_user.role == 'Admin' %}
+            <a href="/panel" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold py-2 px-4 rounded-md border border-gray-700 transition">
+                Powrót do Centrali
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-4">
+                <h2 class="text-xl font-bold text-gray-300 flex items-center gap-2 mb-2">
+                    Stan i Dostępność Floty M0D
+                </h2>
+                
+                <div class="bg-gray-800 rounded-xl shadow-xl border border-gray-700/50 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-700/70 text-gray-300 uppercase text-xs font-bold tracking-wider border-b border-gray-600">
+                                <th class="p-4 w-20 text-center">ID</th>
+                                <th class="p-4">Model Sprzętu</th>
+                                <th class="p-4 w-32 text-center">Licencja</th>
+                                <th class="p-4 w-32 text-center">Status</th>
+                                <th class="p-4">Aktualna Misja / Działanie</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700/60 bg-gray-800/40">
+                            {% for d in drony %}
+                            <tr class="hover:bg-gray-750/30 transition duration-150">
+                                <td class="p-4 font-mono text-center text-gray-500 text-sm">#D-{{ d.id }}</td>
+                                <td class="p-4 text-sm font-semibold text-gray-200">{{ d.model }}</td>
+                                <td class="p-4 text-center">
+                                    {% if d.uprawniony %}
+                                        <span class="text-emerald-400 text-xs font-bold font-mono">TAK</span>
+                                    {% else %}
+                                        <span class="text-red-500 text-xs font-mono">BRAK</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-4 text-center">
+                                    <span class="inline-block w-24 text-center px-2 py-1 rounded text-xs font-bold tracking-wider
+                                        {% if d.status == 'Dostępny' %} bg-emerald-950 text-emerald-400 border border-emerald-800/50
+                                        {% elif d.status == 'Regeneracja' %} bg-amber-950 text-amber-400 border border-amber-800/50 animate-pulse
+                                        {% else %} bg-red-950 text-red-400 border border-red-800/50 {% endif %}">
+                                        {{ d.status }}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-sm">
+                                    {% if d.status == 'Niedostępny' and d.incident_id %}
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span class="text-purple-400 font-medium">{{ d.zadanie }}</span>
+                                            <a href="/sluzba/zakoncz-misje/{{ dept_url }}/{{ d.id }}/{{ d.incident_id }}" 
+                                               class="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-2.5 py-1 rounded transition shadow">
+                                                ✕ Sprowadź i ląduj
+                                            </a>
+                                        </div>
+                                    {% elif d.status == 'Regeneracja' %}
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span class="text-amber-500 italic font-medium animate-pulse">Ładowanie ogniw / Serwis</span>
+                                            <a href="/sluzba/aktywuj-drona/{{ dept_url }}/{{ d.id }}" 
+                                               class="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold px-2.5 py-1 rounded transition shadow flex items-center gap-1">
+                                                Aktywuj drona
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-gray-500 italic">{{ d.zadanie }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-gray-500 text-sm">Brak zarejestrowanych dronów w tym dziale.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-300 flex items-center gap-2 mb-2">
+                    Zgłoszenia Przypisane Operacyjnie
+                </h2>
+                
+                <div class="space-y-3">
+                    {% for akcja in akcje %}
+                    <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-lg space-y-3">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-bold font-mono text-gray-500">M0D #{{ akcja.id }}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase 
+                                {% if akcja.status == 'Oczekuje na decyzję' %} bg-purple-950 text-purple-400 border border-purple-800/60
+                                {% else %} bg-amber-950 text-amber-400 border border-amber-800/60 animate-pulse {% endif %}">
+                                {{ akcja.status }}
+                            </span>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-red-400">{{ akcja.incident_type }}</h4>
+                            <p class="text-xs text-gray-400 mt-1 leading-relaxed">{{ akcja.description }}</p>
+                        </div>
+                        
+                        {% if akcja.status == 'Oczekuje na decyzję' %}
+                        <div class="pt-2 border-t border-gray-700/50 flex flex-col gap-2">
+                            <a href="/sluzba/decyzja/przyjmij/{{ dept_url }}/{{ akcja.id }}" 
+                               class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded text-xs text-center transition shadow">
+                                ✓ Przyjmij i przejmij drona
+                            </a>
+                            <div class="grid grid-cols-2 gap-2">
+                                <a href="/sluzba/decyzja/odrzuc/{{ dept_url }}/{{ akcja.id }}" 
+                                   class="bg-amber-600/90 hover:bg-amber-600 text-white font-semibold py-1 rounded text-xs text-center transition shadow">
+                                    Odrzuć
+                                </a>
+                                <a href="/sluzba/decyzja/troll/{{ dept_url }}/{{ akcja.id }}" 
+                                   class="bg-gray-900 hover:bg-red-950 text-red-400 font-semibold py-1 rounded text-xs text-center transition border border-gray-700 shadow">
+                                    Zgłoś fałszywe zgłoszenie
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-[11px] text-gray-500 italic pt-1">
+                            Misja realizowana w terenie przez operatora.
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="bg-gray-800/40 p-8 text-center text-gray-600 rounded-xl border border-gray-800 text-sm italic">
+                        Brak aktywnych lub oczekujących zgłoszeń w sektorze.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

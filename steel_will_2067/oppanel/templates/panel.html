@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Dyspozytorski - Stalowa Wola</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .mini-map { height: 140px; width: 240px; border-radius: 0.5rem; z-index: 10; }
+        .leaflet-container { font-size: 10px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(31, 41, 55, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-6 font-sans antialiased">
+
+    <div class="w-full px-2 mx-auto">
+        
+        <div class="flex justify-between items-center mb-4 bg-gray-800 p-3 rounded-xl border border-gray-700/60">
+            <div class="flex items-center gap-2 text-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                Status operatora: <span class="text-blue-400 font-bold font-mono">{{ user }}</span>
+            </div>
+            <a href="/logout" class="bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-400 text-xs font-semibold py-1 px-3 rounded transition">
+                Wyloguj się
+            </a>
+        </div>
+
+        <h1 class="text-3xl font-extrabold mb-6 border-b border-gray-800 pb-4 text-red-500 flex items-center gap-3">
+            <span class="inline-block w-3 h-7 bg-red-600 rounded-sm"></span>
+            Zintegrowany System Wspomagania Decyzji – Stalowa Wola
+        </h1>
+
+        <div class="flex flex-wrap gap-3 mb-6 bg-gray-800/50 p-3 rounded-xl border border-gray-700/30">
+            <span class="text-sm font-bold text-gray-400 self-center mr-2">Bazy Sprzętowe Jednostek:</span>
+            <a href="/sluzba/Policja" class="bg-blue-900/40 hover:bg-blue-900/70 border border-blue-700 text-blue-300 text-xs font-semibold py-1.5 px-4 rounded-md transition shadow-sm">Policja</a>
+            <a href="/sluzba/Straz_Pozarna" class="bg-red-900/40 hover:bg-red-900/70 border border-red-700 text-red-300 text-xs font-semibold py-1.5 px-4 rounded-md transition shadow-sm">Straż Pożarna</a>
+            <a href="/sluzba/Pogotowie" class="bg-emerald-900/40 hover:bg-emerald-900/70 border border-emerald-700 text-emerald-300 text-xs font-semibold py-1.5 px-4 rounded-md transition shadow-sm">Pogotowie</a>
+            <a href="/sluzba/Wojsko" class="bg-amber-900/40 hover:bg-amber-900/70 border border-amber-700 text-amber-300 text-xs font-semibold py-1.5 px-4 rounded-md transition shadow-sm">Wojsko</a>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700/50 overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse table-fixed min-w-[1400px]">
+                <thead>
+                    <tr class="bg-gray-700/70 text-gray-300 uppercase text-xs font-bold tracking-wider border-b border-gray-600">
+                        <th class="p-4 w-16 text-center">ID</th>
+                        <th class="p-4 w-44">Typ Zdarzenia</th>
+                        <th class="p-4 w-64">Opis / Szczegóły</th>
+                        <th class="p-4 w-52">Rekomendacja AI (Sprzęt)</th>
+                        <th class="p-4 w-40">Służba</th>
+                        <th class="p-4 w-64">Mapa lokalizacji</th>
+                        <th class="p-4 w-44">Log Czasowy</th>
+                        <th class="p-4 w-40 text-center">Status</th>
+                        <th class="p-4 w-52 text-center">Zarządzanie Misją</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/60 bg-gray-800/40">
+                    {% for z in zgloszenia %}
+                    <tr class="hover:bg-gray-750/50 transition duration-150 align-top">
+                        <td class="p-4 font-bold text-gray-500 text-center text-sm">#{{ z.id }}</td>
+                        <td class="p-4">
+                            <span class="inline-block px-2.5 py-1 rounded-md bg-red-950/60 text-red-400 border border-red-800/60 text-xs font-bold tracking-wide">
+                                {{ z.incident_type }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-gray-300 text-sm leading-relaxed">
+                            <div class="max-h-28 overflow-y-auto pr-2 custom-scrollbar break-words">
+                                {{ z.description if z.description else '<span class="text-gray-600 italic">Brak opisu</span>'|safe }}
+                            </div>
+                        </td>
+
+                        {% set przypisanie = z.assignments[0] if z.assignments else None %}
+
+                        <td class="p-4 text-sm font-medium">
+                            {% if przypisanie %}
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-1.5 text-purple-400 font-bold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                        Sugerowany profil
+                                    </div>
+                                    <button onclick="otworzModal('{{ z.id }}', '{{ z.incident_type }}', '{{ przypisanie.justification|replace("'", "\\'") }}')" 
+                                            class="text-left text-xs bg-purple-950/40 hover:bg-purple-900/40 text-purple-300 border border-purple-800/50 p-1.5 rounded transition mt-1">
+                                        Zobacz uzasadnienie AI
+                                    </button>
+                                </div>
+                            {% else %}
+                                <span class="text-gray-600 text-xs">Analiza w toku...</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="p-4 text-sm">
+                            {% if przypisanie %}
+                                <span class="text-gray-200 font-medium">{{ przypisanie.department.name }}</span>
+                            {% else %}
+                                <span class="text-gray-600 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="p-3">
+                            <div id="map-{{ z.id }}" class="mini-map border border-gray-700 shadow-lg" data-lat="{{ z.lat }}" data-lng="{{ z.lng }}"></div>
+                        </td>
+                        
+                        <td class="p-4 text-xs font-mono text-gray-400 space-y-1">
+                            <div><span class="text-gray-600">WPŁYW:</span> {{ z.created_at.strftime('%H:%M:%S') }}</div>
+                            {% if przypisanie and przypisanie.assigned_at %}
+                                <div class="text-emerald-500"><span class="text-gray-600">START:</span> {{ przypisanie.assigned_at.strftime('%H:%M:%S') }}</div>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="p-4 text-center">
+                            <span class="inline-block w-36 text-center px-2 py-1 rounded text-xs font-bold tracking-wider shadow-sm
+                                {% if z.status == 'Nowe' %} bg-blue-950 text-blue-400 border border-blue-800/50
+                                {% elif z.status == 'Oczekuje na operatora' %} bg-purple-950 text-purple-400 border border-purple-800/50
+                                {% elif z.status == 'W akcji' %} bg-amber-950 text-amber-400 border border-amber-800/40 animate-pulse
+                                {% elif 'Anulowane' in z.status %} bg-red-950 text-red-400 border border-red-900
+                                {% else %} bg-emerald-950 text-emerald-400 border border-emerald-800/50 {% endif %}">
+                                {{ z.status }}
+                            </span>
+                        </td>
+                        
+                        <td class="p-4 text-center text-xs">
+                            <div class="flex flex-col gap-2 items-center justify-center">
+                                {% if z.status == 'Oczekuje na operatora' %}
+                                    <a href="/akcja/przyjmij/{{ z.id }}" class="w-32 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 rounded text-center transition shadow">
+                                        ✓ Przyjmij lot
+                                    </a>
+                                    <a href="/akcja/odrzuc/{{ z.id }}" class="w-32 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-1 rounded text-center transition shadow">
+                                        ⎌ Odrzuć (Kolejka)
+                                    </a>
+                                    <a href="/akcja/troll/{{ z.id }}" class="w-32 bg-red-900/80 hover:bg-red-800 text-red-200 font-semibold py-1 rounded text-center transition border border-red-700 shadow">
+                                        ⚠ Wykryto trolla
+                                    </a>
+                                {% elif z.status == 'W akcji' %}
+                                    <form action="/akcja/zakoncz/{{ z.id }}" method="post" class="flex flex-col gap-1.5 w-36">
+                                        <textarea name="notatki" placeholder="Wpisz przebieg misji..." class="w-full text-[11px] p-1 text-gray-200 bg-gray-900 rounded border border-gray-700 custom-scrollbar resize-none h-12" required></textarea>
+                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 rounded transition shadow">
+                                            ✕ Zakończ i ląduj
+                                        </button>
+                                    </form>
+                                {% elif z.status == 'Zamknięte' %}
+                                    <span class="text-gray-500 border border-gray-700 bg-gray-900/40 px-2 py-1 rounded block text-center w-32 font-medium">Ukończono</span>
+                                {% else %}
+                                    <span class="text-gray-600 italic">Brak akcji</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="raport-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-xl font-extrabold text-purple-400 mb-2 border-b border-gray-700 pb-3 flex items-center gap-2">Rekomendacja Sprzętowa AI</h3>
+            <p class="text-xs text-gray-400 mb-4 uppercase">Zgłoszenie: <span id="modal-incident-type" class="text-gray-200 font-bold normal-case"></span></p>
+            <div class="bg-gray-900/80 p-4 rounded-lg border border-gray-700/60 text-sm text-gray-300 italic mb-6 leading-relaxed shadow-inner">"<span id="modal-justification"></span>"</div>
+            <div class="text-right"><button onclick="zamknijModal()" class="bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold py-2 px-6 rounded-md transition">Zamknij</button></div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.mini-map').forEach(mapEl => {
+            const lat = parseFloat(mapEl.dataset.lat);
+            const lng = parseFloat(mapEl.dataset.lng);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const miniMap = L.map(mapEl.id, { center: [lat, lng], zoom: 15, zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+                L.marker([lat, lng]).addTo(miniMap);
+            }
+        });
+        const modal = document.getElementById('raport-modal');
+        const modalType = document.getElementById('modal-incident-type');
+        const modalJustification = document.getElementById('modal-justification');
+        function otworzModal(id, type, text) { modalType.innerText = "#" + id + " - " + type; modalJustification.innerText = text; modal.classList.remove('hidden'); }
+        function zamknijModal() { modal.classList.add('hidden'); }
+    </script>
+</body>
+</html>
