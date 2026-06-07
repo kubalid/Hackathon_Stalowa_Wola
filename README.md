@@ -33,7 +33,7 @@ The system features a multi-tiered dashboard architecture to manage incoming cri
 
 ### 4. 3D Drone Flight Simulation
 To visualize the drone's path to the emergency, we implemented a fully functional 3D simulation.
-* **Stalowa Wola 3D Map:** A realistic, generated 3D environment based on the city of Stalowa Wola[cite: 1].
+* **Stalowa Wola 3D Map:** A realistic, generated 3D environment based on the city of Stalowa Wola.
 * **Manual Controller Support:** Users can manually pilot the drone through the city towards the target using a physical controller.
 * **Real-time Camera Feed:** Simulates the visual data an operator would see during an actual drone flight.
 
@@ -64,7 +64,7 @@ To visualize the drone's path to the emergency, we implemented a fully functiona
 ---
 
 ## The Team
-This project was successfully built by a multidisciplinary team during the Spaceshield Hack 2026[cite: 1]:
+This project was successfully built by a multidisciplinary team during the Spaceshield Hack 2026:
 
 * **Jakub**: Simulation
 * **Grzegorz**: Simulation
